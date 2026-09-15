@@ -63,6 +63,21 @@ namespace mdJucePlugin
 			md::PanelControl control;
 		};
 
+		struct KeyboardArrow
+		{
+			Rml::Input::KeyIdentifier key;
+			const char* buttonId;
+			md::PanelControl control;
+		};
+
+		constexpr KeyboardArrow g_keyboardArrows[] =
+		{
+			{ Rml::Input::KI_LEFT,  "btLeft",  md::PanelControl::Left },
+			{ Rml::Input::KI_RIGHT, "btRight", md::PanelControl::Right },
+			{ Rml::Input::KI_UP,    "btUp",    md::PanelControl::Up },
+			{ Rml::Input::KI_DOWN,  "btDown",  md::PanelControl::Down },
+		};
+
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
 		{
 			for(uint32_t half = 0; half < 2; ++half)
@@ -581,6 +596,35 @@ namespace mdJucePlugin
 
 		if(auto* const document = getDocument())
 		{
+			juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
+				[this](Rml::Event& _event)
+			{
+				if(settingsOpened())
+					return;
+
+				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
+				for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
+				{
+					if(key != g_keyboardArrows[arrow].key)
+						continue;
+					pressKeyboardArrow(arrow);
+					_event.StopPropagation();
+					return;
+				}
+			});
+			juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
+				[this](Rml::Event& _event)
+			{
+				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
+				for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
+				{
+					if(key != g_keyboardArrows[arrow].key)
+						continue;
+					releaseKeyboardArrow(arrow);
+					_event.StopPropagation();
+					return;
+				}
+			});
 			juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
 				[this](const Rml::Event& _event)
 				{
@@ -663,6 +707,46 @@ namespace mdJucePlugin
 		(void)sendPanelEvent(combined.row, combined.mask);
 		if(getModel() == md::MachineModel::Monomachine && isTrigger(_control))
 			releasePatternBankLatch();
+	}
+
+	void Editor::pressKeyboardArrow(const size_t _arrow)
+	{
+		if(_arrow >= std::size(g_keyboardArrows) || m_keyboardArrowPressed[_arrow])
+			return;
+
+		const auto& arrow = g_keyboardArrows[_arrow];
+		const auto packet = md::panelPacket(getModel(), arrow.control);
+		auto* const button = findChild<juceRmlUi::ElemButton>(arrow.buttonId, false);
+		// Do not steal a simultaneous mouse gesture for the same physical switch.
+		if(!packet || !button || button->isChecked())
+			return;
+
+		m_keyboardArrowPressed[_arrow] = true;
+		juceRmlUi::ElemButton::setChecked(button, true);
+		const auto combined = m_panelRows.press(*packet);
+		(void)sendPanelEvent(combined.row, combined.mask);
+	}
+
+	void Editor::releaseKeyboardArrow(const size_t _arrow)
+	{
+		if(_arrow >= std::size(g_keyboardArrows) || !m_keyboardArrowPressed[_arrow])
+			return;
+
+		m_keyboardArrowPressed[_arrow] = false;
+		const auto& arrow = g_keyboardArrows[_arrow];
+		if(const auto packet = md::panelPacket(getModel(), arrow.control))
+			if(auto* const button = findChild<juceRmlUi::ElemButton>(arrow.buttonId, false))
+			{
+				juceRmlUi::ElemButton::setChecked(button, false);
+				const auto combined = m_panelRows.release(*packet);
+				(void)sendPanelEvent(combined.row, combined.mask);
+			}
+	}
+
+	void Editor::releaseKeyboardArrows()
+	{
+		for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
+			releaseKeyboardArrow(arrow);
 	}
 
 	void Editor::releaseActivePanelButtons()
@@ -848,6 +932,7 @@ namespace mdJucePlugin
 	{
 		cancelLcdGesture();
 		endPanelGesture();
+		releaseKeyboardArrows();
 		releasePanelButtonGestures();
 		releaseAllPanelInputs();
 	}

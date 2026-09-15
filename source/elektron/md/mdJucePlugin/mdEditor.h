@@ -112,6 +112,9 @@ namespace mdJucePlugin
 			const md::PanelPacket& _packet, bool _shiftDown);
 		void releasePanelButton(juceRmlUi::ElemButton* _button, md::PanelControl _control,
 			const md::PanelPacket& _packet);
+		void pressKeyboardArrow(size_t _arrow);
+		void releaseKeyboardArrow(size_t _arrow);
+		void releaseKeyboardArrows();
 		void releaseActivePanelButtons();
 		void beginPanelGesture(Rml::Element* _element,
 			std::initializer_list<md::PanelControl> _controls);
@@ -201,6 +204,9 @@ namespace mdJucePlugin
 			md::PanelPacket packet;
 		};
 		std::vector<ActivePanelButton> m_activePanelButtons;
+		// Kept separately from mouse gestures because a key may remain down across
+		// RmlUi events; each direction is an independent physical panel switch.
+		std::array<bool, 4> m_keyboardArrowPressed{};
 
 		struct PanelStep
 		{
