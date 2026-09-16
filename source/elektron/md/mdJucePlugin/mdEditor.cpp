@@ -607,7 +607,8 @@ namespace mdJucePlugin
 				{
 					if(key != g_keyboardArrows[arrow].key)
 						continue;
-					pressKeyboardArrow(arrow);
+					pressKeyboardArrow(arrow,
+						juceRmlUi::helper::getKeyModShift(_event));
 					_event.StopPropagation();
 					return;
 				}
@@ -628,6 +629,11 @@ namespace mdJucePlugin
 			juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
 				[this](const Rml::Event& _event)
 				{
+					// Modifier-only changes arrive as KI_UNKNOWN. FUNCTION is intentionally
+					// engaged by a Shift-modified panel shortcut, rather than by Shift on
+					// its own, so existing Shift-click panel latches keep their meaning.
+					if(!juceRmlUi::helper::getKeyModShift(_event))
+						releaseKeyboardFunction();
 					if(!juceRmlUi::helper::getKeyModAlt(_event))
 						releaseEncoderPress();
 					if(_event.GetParameter<int>("shift_key", 0) == 0
@@ -709,7 +715,7 @@ namespace mdJucePlugin
 			releasePatternBankLatch();
 	}
 
-	void Editor::pressKeyboardArrow(const size_t _arrow)
+	void Editor::pressKeyboardArrow(const size_t _arrow, const bool _shiftDown)
 	{
 		if(_arrow >= std::size(g_keyboardArrows) || m_keyboardArrowPressed[_arrow])
 			return;
@@ -722,6 +728,8 @@ namespace mdJucePlugin
 			return;
 
 		m_keyboardArrowPressed[_arrow] = true;
+		if(_shiftDown)
+			pressKeyboardFunction();
 		juceRmlUi::ElemButton::setChecked(button, true);
 		const auto combined = m_panelRows.press(*packet);
 		(void)sendPanelEvent(combined.row, combined.mask);
@@ -747,6 +755,40 @@ namespace mdJucePlugin
 	{
 		for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
 			releaseKeyboardArrow(arrow);
+		releaseKeyboardFunction();
+	}
+
+	void Editor::pressKeyboardFunction()
+	{
+		if(m_keyboardFunctionPressed)
+			return;
+
+		const auto packet = md::panelPacket(getModel(), md::PanelControl::Function);
+		auto* const button = findChild<juceRmlUi::ElemButton>("btFunction", false);
+		// Another source already owns this physical switch, so its row bit is
+		// already present and this keyboard source must not release it later.
+		if(!packet || !button || button->isChecked())
+			return;
+
+		m_keyboardFunctionPressed = true;
+		juceRmlUi::ElemButton::setChecked(button, true);
+		const auto combined = m_panelRows.press(*packet);
+		(void)sendPanelEvent(combined.row, combined.mask);
+	}
+
+	void Editor::releaseKeyboardFunction()
+	{
+		if(!m_keyboardFunctionPressed)
+			return;
+
+		m_keyboardFunctionPressed = false;
+		if(auto* const button = findChild<juceRmlUi::ElemButton>("btFunction", false))
+			juceRmlUi::ElemButton::setChecked(button, false);
+		if(const auto packet = md::panelPacket(getModel(), md::PanelControl::Function))
+		{
+			const auto combined = m_panelRows.release(*packet);
+			(void)sendPanelEvent(combined.row, combined.mask);
+		}
 	}
 
 	void Editor::releaseActivePanelButtons()
