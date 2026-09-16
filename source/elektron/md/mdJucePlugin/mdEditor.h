@@ -1,6 +1,6 @@
 #pragma once
 
-#include <array>
+#include <iterator>
 #include <deque>
 #include <initializer_list>
 #include <memory>
@@ -208,7 +208,7 @@ namespace mdJucePlugin
 		std::vector<ActivePanelButton> m_activePanelButtons;
 		// Kept separately from mouse gestures because a key may remain down across
 		// RmlUi events; each direction is an independent physical panel switch.
-		std::array<bool, 4> m_keyboardArrowPressed{};
+		std::array<bool, 6> m_keyboardArrowPressed{};
 		bool m_keyboardFunctionPressed = false;
 
 		struct PanelStep

@@ -42,6 +42,8 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <iterator>
+#include <array>
 
 namespace mdJucePlugin
 {
@@ -72,7 +74,7 @@ namespace mdJucePlugin
 			md::PanelControl control;
 		};
 
-		const KeyboardArrow g_keyboardArrows[] =
+		const KeyboardArrow g_keyboardArrows[6] =
 		{
 			{ Rml::Input::KI_LEFT, juce::KeyPress::leftKey,
 				"btLeft", md::PanelControl::Left },
@@ -82,6 +84,10 @@ namespace mdJucePlugin
 				"btUp", md::PanelControl::Up },
 			{ Rml::Input::KI_DOWN, juce::KeyPress::downKey,
 				"btDown", md::PanelControl::Down },
+			{ Rml::Input::KI_RETURN,     juce::KeyPress::returnKey,
+				    "btEnter", md::PanelControl::Enter },
+			{ Rml::Input::KI_BACK, juce::KeyPress::backspaceKey,
+				 "btExit",  md::PanelControl::Exit  },
 		};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
@@ -681,6 +687,9 @@ namespace mdJucePlugin
 	{
 		if(!_button || _button->isChecked())
 			return;
+
+		// A missing native key-up must never let an earlier hold leak into a new,
+		// unmodified click before the timer fail-safe gets its next turn.
 		if(!_shiftDown && !m_shiftPanelLatch.empty())
 			releasePanelButtonGestures();
 
@@ -731,7 +740,7 @@ namespace mdJucePlugin
 			return;
 
 		m_keyboardArrowPressed[_arrow] = true;
-		if(_shiftDown)
+		if(_shiftDown && m_shiftPanelLatch.empty())
 			pressKeyboardFunction();
 		juceRmlUi::ElemButton::setChecked(button, true);
 		const auto combined = m_panelRows.press(*packet);
