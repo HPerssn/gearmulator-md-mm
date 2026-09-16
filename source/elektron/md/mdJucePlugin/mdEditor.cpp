@@ -66,14 +66,31 @@ namespace mdJucePlugin
 			md::PanelControl control;
 		};
 
-		const std::array<KeyboardMapping, 6> g_defaultKeyboardMappings =
+		const std::array<KeyboardMapping, 23> g_defaultKeyboardMappings =
 		{{
-			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left  },
-			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right },
-			{ Rml::Input::KI_UP,     juce::KeyPress::upKey,         md::PanelControl::Up    },
-			{ Rml::Input::KI_DOWN,   juce::KeyPress::downKey,       md::PanelControl::Down  },
-			{ Rml::Input::KI_RETURN, juce::KeyPress::returnKey,     md::PanelControl::Enter },
-			{ Rml::Input::KI_BACK,   juce::KeyPress::backspaceKey,  md::PanelControl::Exit  },
+			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left     },
+			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right    },
+			{ Rml::Input::KI_UP,     juce::KeyPress::upKey,         md::PanelControl::Up       },
+			{ Rml::Input::KI_DOWN,   juce::KeyPress::downKey,       md::PanelControl::Down     },
+			{ Rml::Input::KI_RETURN, juce::KeyPress::returnKey,     md::PanelControl::Enter    },
+			{ Rml::Input::KI_BACK,   juce::KeyPress::backspaceKey,  md::PanelControl::Exit     },
+			{ Rml::Input::KI_1,      '1',                           md::PanelControl::Trigger1  },
+			{ Rml::Input::KI_2,      '2',                           md::PanelControl::Trigger2  },
+			{ Rml::Input::KI_3,      '3',                           md::PanelControl::Trigger3  },
+			{ Rml::Input::KI_4,      '4',                           md::PanelControl::Trigger4  },
+			{ Rml::Input::KI_5,      '5',                           md::PanelControl::Trigger5  },
+			{ Rml::Input::KI_6,      '6',                           md::PanelControl::Trigger6  },
+			{ Rml::Input::KI_7,      '7',                           md::PanelControl::Trigger7  },
+			{ Rml::Input::KI_8,      '8',                           md::PanelControl::Trigger8  },
+			{ Rml::Input::KI_Q,      'q',                           md::PanelControl::Trigger9  },
+			{ Rml::Input::KI_W,      'w',                           md::PanelControl::Trigger10 },
+			{ Rml::Input::KI_E,      'e',                           md::PanelControl::Trigger11 },
+			{ Rml::Input::KI_R,      'r',                           md::PanelControl::Trigger12 },
+			{ Rml::Input::KI_T,      't',                           md::PanelControl::Trigger13 },
+			{ Rml::Input::KI_Y,      'y',                           md::PanelControl::Trigger14 },
+			{ Rml::Input::KI_U,      'u',                           md::PanelControl::Trigger15 },
+			{ Rml::Input::KI_I,      'i',                           md::PanelControl::Trigger16 },
+			{ Rml::Input::KI_TAB,    juce::KeyPress::tabKey,        md::PanelControl::Record   },
 		}};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
@@ -611,7 +628,7 @@ namespace mdJucePlugin
 					_event.StopPropagation();
 					return;
 				}
-			});
+			}, true);
 			juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
 				[this](Rml::Event& _event)
 			{
