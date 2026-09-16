@@ -66,29 +66,15 @@ namespace mdJucePlugin
 			md::PanelControl control;
 		};
 
-		struct KeyboardArrow
-		{
-			Rml::Input::KeyIdentifier key;
-			int juceKeyCode;
-			const char* buttonId;
-			md::PanelControl control;
-		};
-
-		const KeyboardArrow g_keyboardArrows[6] =
-		{
-			{ Rml::Input::KI_LEFT, juce::KeyPress::leftKey,
-				"btLeft", md::PanelControl::Left },
-			{ Rml::Input::KI_RIGHT, juce::KeyPress::rightKey,
-				"btRight", md::PanelControl::Right },
-			{ Rml::Input::KI_UP, juce::KeyPress::upKey,
-				"btUp", md::PanelControl::Up },
-			{ Rml::Input::KI_DOWN, juce::KeyPress::downKey,
-				"btDown", md::PanelControl::Down },
-			{ Rml::Input::KI_RETURN,     juce::KeyPress::returnKey,
-				    "btEnter", md::PanelControl::Enter },
-			{ Rml::Input::KI_BACK, juce::KeyPress::backspaceKey,
-				 "btExit",  md::PanelControl::Exit  },
-		};
+		const std::array<KeyboardMapping, 6> g_defaultKeyboardMappings =
+		{{
+			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left  },
+			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right },
+			{ Rml::Input::KI_UP,     juce::KeyPress::upKey,         md::PanelControl::Up    },
+			{ Rml::Input::KI_DOWN,   juce::KeyPress::downKey,       md::PanelControl::Down  },
+			{ Rml::Input::KI_RETURN, juce::KeyPress::returnKey,     md::PanelControl::Enter },
+			{ Rml::Input::KI_BACK,   juce::KeyPress::backspaceKey,  md::PanelControl::Exit  },
+		}};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
 		{
@@ -306,6 +292,7 @@ namespace mdJucePlugin
 		}
 
 		createLcd();
+		initKeyboardShortcuts();
 		createButtons();
 		createEncoders();
 		createMasterVolume();
@@ -615,11 +602,11 @@ namespace mdJucePlugin
 					return;
 
 				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
-				for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
+				for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
 				{
-					if(key != g_keyboardArrows[arrow].key)
+					if(key != m_keyboardMappings[mapping].key)
 						continue;
-					pressKeyboardArrow(arrow,
+					pressKeyboardMapping(mapping,
 						juceRmlUi::helper::getKeyModShift(_event));
 					_event.StopPropagation();
 					return;
@@ -629,11 +616,11 @@ namespace mdJucePlugin
 				[this](Rml::Event& _event)
 			{
 				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
-				for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
+				for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
 				{
-					if(key != g_keyboardArrows[arrow].key)
+					if(key != m_keyboardMappings[mapping].key)
 						continue;
-					releaseKeyboardArrow(arrow);
+					releaseKeyboardMapping(mapping);
 					_event.StopPropagation();
 					return;
 				}
@@ -727,19 +714,25 @@ namespace mdJucePlugin
 			releasePatternBankLatch();
 	}
 
-	void Editor::pressKeyboardArrow(const size_t _arrow, const bool _shiftDown)
+	void Editor::initKeyboardShortcuts()
 	{
-		if(_arrow >= std::size(g_keyboardArrows) || m_keyboardArrowPressed[_arrow])
+		m_keyboardMappings.assign(g_defaultKeyboardMappings.begin(), g_defaultKeyboardMappings.end());
+		m_keyboardMappingPressed.assign(m_keyboardMappings.size(), false);
+	}
+
+	void Editor::pressKeyboardMapping(const size_t _index, const bool _shiftDown)
+	{
+		if(_index >= m_keyboardMappings.size() || m_keyboardMappingPressed[_index])
 			return;
 
-		const auto& arrow = g_keyboardArrows[_arrow];
-		const auto packet = md::panelPacket(getModel(), arrow.control);
-		auto* const button = findChild<juceRmlUi::ElemButton>(arrow.buttonId, false);
+		const auto& mapping = m_keyboardMappings[_index];
+		const auto packet = md::panelPacket(getModel(), mapping.control);
+		auto* const button = findButtonForControl(mapping.control);
 		// Do not steal a simultaneous mouse gesture for the same physical switch.
 		if(!packet || !button || button->isChecked())
 			return;
 
-		m_keyboardArrowPressed[_arrow] = true;
+		m_keyboardMappingPressed[_index] = true;
 		if(_shiftDown && m_shiftPanelLatch.empty())
 			pressKeyboardFunction();
 		juceRmlUi::ElemButton::setChecked(button, true);
@@ -747,15 +740,15 @@ namespace mdJucePlugin
 		(void)sendPanelEvent(combined.row, combined.mask);
 	}
 
-	void Editor::releaseKeyboardArrow(const size_t _arrow)
+	void Editor::releaseKeyboardMapping(const size_t _index)
 	{
-		if(_arrow >= std::size(g_keyboardArrows) || !m_keyboardArrowPressed[_arrow])
+		if(_index >= m_keyboardMappings.size() || !m_keyboardMappingPressed[_index])
 			return;
 
-		m_keyboardArrowPressed[_arrow] = false;
-		const auto& arrow = g_keyboardArrows[_arrow];
-		if(const auto packet = md::panelPacket(getModel(), arrow.control))
-			if(auto* const button = findChild<juceRmlUi::ElemButton>(arrow.buttonId, false))
+		m_keyboardMappingPressed[_index] = false;
+		const auto& mapping = m_keyboardMappings[_index];
+		if(const auto packet = md::panelPacket(getModel(), mapping.control))
+			if(auto* const button = findButtonForControl(mapping.control))
 			{
 				juceRmlUi::ElemButton::setChecked(button, false);
 				const auto combined = m_panelRows.release(*packet);
@@ -763,11 +756,19 @@ namespace mdJucePlugin
 			}
 	}
 
-	void Editor::releaseKeyboardArrows()
+	void Editor::releaseKeyboardMappings()
 	{
-		for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
-			releaseKeyboardArrow(arrow);
+		for(size_t i = 0; i < m_keyboardMappings.size(); ++i)
+			releaseKeyboardMapping(i);
 		releaseKeyboardFunction();
+	}
+
+	juceRmlUi::ElemButton* Editor::findButtonForControl(const md::PanelControl _control) const
+	{
+		for(const auto& pb : g_panelButtons)
+			if(pb.control == _control)
+				return findChild<juceRmlUi::ElemButton>(pb.id, false);
+		return nullptr;
 	}
 
 	void Editor::pressKeyboardFunction()
@@ -984,7 +985,7 @@ namespace mdJucePlugin
 	{
 		cancelLcdGesture();
 		endPanelGesture();
-		releaseKeyboardArrows();
+		releaseKeyboardMappings();
 		releasePanelButtonGestures();
 		releaseAllPanelInputs();
 	}
@@ -2204,10 +2205,10 @@ namespace mdJucePlugin
 		// Key-up can be swallowed by a plugin host after a Shift-modified arrow
 		// chord. Poll the native key state so the corresponding panel switch is
 		// never left asserted.
-		for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
-			if(m_keyboardArrowPressed[arrow]
-				&& !juce::KeyPress::isKeyCurrentlyDown(g_keyboardArrows[arrow].juceKeyCode))
-				releaseKeyboardArrow(arrow);
+		for(size_t i = 0; i < m_keyboardMappings.size(); ++i)
+			if(m_keyboardMappingPressed[i]
+				&& !juce::KeyPress::isKeyCurrentlyDown(m_keyboardMappings[i].juceKeyCode))
+				releaseKeyboardMapping(i);
 		// Some plugin hosts can lose the modifier key-up when focus changes. Poll
 		// native state as a fail-safe so no panel row remains held indefinitely.
 		if(!m_shiftPanelLatch.empty()

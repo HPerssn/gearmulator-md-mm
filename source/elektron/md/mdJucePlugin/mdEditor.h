@@ -48,6 +48,13 @@ namespace mdJucePlugin
 	class PixelPerfectPanel;
 	struct EditorIdentityTestAccess;
 
+	struct KeyboardMapping
+	{
+		Rml::Input::KeyIdentifier key;
+		int juceKeyCode;
+		md::PanelControl control;
+	};
+
 	class Editor final : public jucePluginEditorLib::Editor, juce::MultiTimer,
 		private juce::FocusChangeListener
 	{
@@ -112,9 +119,11 @@ namespace mdJucePlugin
 			const md::PanelPacket& _packet, bool _shiftDown);
 		void releasePanelButton(juceRmlUi::ElemButton* _button, md::PanelControl _control,
 			const md::PanelPacket& _packet);
-		void pressKeyboardArrow(size_t _arrow, bool _shiftDown);
-		void releaseKeyboardArrow(size_t _arrow);
-		void releaseKeyboardArrows();
+		void initKeyboardShortcuts();
+		void pressKeyboardMapping(size_t _index, bool _shiftDown);
+		void releaseKeyboardMapping(size_t _index);
+		void releaseKeyboardMappings();
+		juceRmlUi::ElemButton* findButtonForControl(md::PanelControl _control) const;
 		void pressKeyboardFunction();
 		void releaseKeyboardFunction();
 		void releaseActivePanelButtons();
@@ -208,7 +217,9 @@ namespace mdJucePlugin
 		std::vector<ActivePanelButton> m_activePanelButtons;
 		// Kept separately from mouse gestures because a key may remain down across
 		// RmlUi events; each direction is an independent physical panel switch.
-		std::array<bool, 6> m_keyboardArrowPressed{};
+
+		std::vector<KeyboardMapping> m_keyboardMappings;
+		std::vector<bool> m_keyboardMappingPressed;
 		bool m_keyboardFunctionPressed = false;
 
 		struct PanelStep
