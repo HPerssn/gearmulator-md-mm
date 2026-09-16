@@ -37,6 +37,7 @@
 #include "RmlUi/Core/ElementDocument.h"
 
 #include <algorithm>
+#include <iostream>
 #include <cmath>
 #include <functional>
 #include <string>
@@ -66,16 +67,21 @@ namespace mdJucePlugin
 		struct KeyboardArrow
 		{
 			Rml::Input::KeyIdentifier key;
+			int juceKeyCode;
 			const char* buttonId;
 			md::PanelControl control;
 		};
 
-		constexpr KeyboardArrow g_keyboardArrows[] =
+		const KeyboardArrow g_keyboardArrows[] =
 		{
-			{ Rml::Input::KI_LEFT,  "btLeft",  md::PanelControl::Left },
-			{ Rml::Input::KI_RIGHT, "btRight", md::PanelControl::Right },
-			{ Rml::Input::KI_UP,    "btUp",    md::PanelControl::Up },
-			{ Rml::Input::KI_DOWN,  "btDown",  md::PanelControl::Down },
+			{ Rml::Input::KI_LEFT, juce::KeyPress::leftKey,
+				"btLeft", md::PanelControl::Left },
+			{ Rml::Input::KI_RIGHT, juce::KeyPress::rightKey,
+				"btRight", md::PanelControl::Right },
+			{ Rml::Input::KI_UP, juce::KeyPress::upKey,
+				"btUp", md::PanelControl::Up },
+			{ Rml::Input::KI_DOWN, juce::KeyPress::downKey,
+				"btDown", md::PanelControl::Down },
 		};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
@@ -675,9 +681,6 @@ namespace mdJucePlugin
 	{
 		if(!_button || _button->isChecked())
 			return;
-
-		// A missing native key-up must never let an earlier hold leak into a new,
-		// unmodified click before the timer fail-safe gets its next turn.
 		if(!_shiftDown && !m_shiftPanelLatch.empty())
 			releasePanelButtonGestures();
 
@@ -765,8 +768,6 @@ namespace mdJucePlugin
 
 		const auto packet = md::panelPacket(getModel(), md::PanelControl::Function);
 		auto* const button = findChild<juceRmlUi::ElemButton>("btFunction", false);
-		// Another source already owns this physical switch, so its row bit is
-		// already present and this keyboard source must not release it later.
 		if(!packet || !button || button->isChecked())
 			return;
 
@@ -2186,6 +2187,18 @@ namespace mdJucePlugin
 		const auto modifiers = juce::ModifierKeys::getCurrentModifiersRealtime();
 		if(m_encoderPress.active() && (!modifiers.isAltDown() || !modifiers.isLeftButtonDown()))
 			releaseEncoderPress();
+		// Some hosts do not forward a modifier key-up to RmlUi after a keyboard
+		// chord. Match the Shift-click latch fail-safe below so FUNCTION cannot
+		// remain held after physical Shift has been released.
+		if(m_keyboardFunctionPressed && !modifiers.isShiftDown())
+			releaseKeyboardFunction();
+		// Key-up can be swallowed by a plugin host after a Shift-modified arrow
+		// chord. Poll the native key state so the corresponding panel switch is
+		// never left asserted.
+		for(size_t arrow = 0; arrow < std::size(g_keyboardArrows); ++arrow)
+			if(m_keyboardArrowPressed[arrow]
+				&& !juce::KeyPress::isKeyCurrentlyDown(g_keyboardArrows[arrow].juceKeyCode))
+				releaseKeyboardArrow(arrow);
 		// Some plugin hosts can lose the modifier key-up when focus changes. Poll
 		// native state as a fail-safe so no panel row remains held indefinitely.
 		if(!m_shiftPanelLatch.empty()
