@@ -66,7 +66,7 @@ namespace mdJucePlugin
 			md::PanelControl control;
 		};
 
-		const std::array<KeyboardMapping, 27> g_defaultKeyboardMappings =
+		const std::array<KeyboardMapping, 35> g_defaultKeyboardMappings =
 		{{
 			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left        },
 			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right       },
@@ -91,10 +91,18 @@ namespace mdJucePlugin
 			{ Rml::Input::KI_U,      'U',                           md::PanelControl::Trigger15   },
 			{ Rml::Input::KI_I,      'I',                           md::PanelControl::Trigger16   },
 			{ Rml::Input::KI_TAB,    juce::KeyPress::tabKey,        md::PanelControl::Record      },
+			{ Rml::Input::KI_O,      'O',                           md::PanelControl::Stop        },
 			{ Rml::Input::KI_P,      'P',                           md::PanelControl::Play        },
-			{ Rml::Input::KI_S,      'S',                           md::PanelControl::Stop        },
 			{ Rml::Input::KI_K,      'K',                           md::PanelControl::Kit         },
 			{ Rml::Input::KI_F,      'F',                           md::PanelControl::PatternSong, md::PanelControl::SongEnable },
+			{ Rml::Input::KI_A,      'A',                           md::PanelControl::BankA       },
+			{ Rml::Input::KI_S,      'S',                           md::PanelControl::BankB       },
+			{ Rml::Input::KI_D,      'D',                           md::PanelControl::BankC       },
+			{ Rml::Input::KI_H,      'H',                           md::PanelControl::BankD       },
+			{ Rml::Input::KI_G,      'G',                           md::PanelControl::BankGroup   },
+			{ Rml::Input::KI_L,      'L',                           md::PanelControl::Scale       },
+			{ Rml::Input::KI_J,      'J',                           md::PanelControl::ClassicExtended, md::PanelControl::TrigSelect },
+			{ Rml::Input::KI_N,      'N',                           md::PanelControl::DataPageForward },
 		}};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
