@@ -66,31 +66,35 @@ namespace mdJucePlugin
 			md::PanelControl control;
 		};
 
-		const std::array<KeyboardMapping, 23> g_defaultKeyboardMappings =
+		const std::array<KeyboardMapping, 27> g_defaultKeyboardMappings =
 		{{
-			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left     },
-			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right    },
-			{ Rml::Input::KI_UP,     juce::KeyPress::upKey,         md::PanelControl::Up       },
-			{ Rml::Input::KI_DOWN,   juce::KeyPress::downKey,       md::PanelControl::Down     },
-			{ Rml::Input::KI_RETURN, juce::KeyPress::returnKey,     md::PanelControl::Enter    },
-			{ Rml::Input::KI_BACK,   juce::KeyPress::backspaceKey,  md::PanelControl::Exit     },
-			{ Rml::Input::KI_1,      '1',                           md::PanelControl::Trigger1  },
-			{ Rml::Input::KI_2,      '2',                           md::PanelControl::Trigger2  },
-			{ Rml::Input::KI_3,      '3',                           md::PanelControl::Trigger3  },
-			{ Rml::Input::KI_4,      '4',                           md::PanelControl::Trigger4  },
-			{ Rml::Input::KI_5,      '5',                           md::PanelControl::Trigger5  },
-			{ Rml::Input::KI_6,      '6',                           md::PanelControl::Trigger6  },
-			{ Rml::Input::KI_7,      '7',                           md::PanelControl::Trigger7  },
-			{ Rml::Input::KI_8,      '8',                           md::PanelControl::Trigger8  },
-			{ Rml::Input::KI_Q,      'q',                           md::PanelControl::Trigger9  },
-			{ Rml::Input::KI_W,      'w',                           md::PanelControl::Trigger10 },
-			{ Rml::Input::KI_E,      'e',                           md::PanelControl::Trigger11 },
-			{ Rml::Input::KI_R,      'r',                           md::PanelControl::Trigger12 },
-			{ Rml::Input::KI_T,      't',                           md::PanelControl::Trigger13 },
-			{ Rml::Input::KI_Y,      'y',                           md::PanelControl::Trigger14 },
-			{ Rml::Input::KI_U,      'u',                           md::PanelControl::Trigger15 },
-			{ Rml::Input::KI_I,      'i',                           md::PanelControl::Trigger16 },
-			{ Rml::Input::KI_TAB,    juce::KeyPress::tabKey,        md::PanelControl::Record   },
+			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left        },
+			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right       },
+			{ Rml::Input::KI_UP,     juce::KeyPress::upKey,         md::PanelControl::Up          },
+			{ Rml::Input::KI_DOWN,   juce::KeyPress::downKey,       md::PanelControl::Down        },
+			{ Rml::Input::KI_RETURN, juce::KeyPress::returnKey,     md::PanelControl::Enter       },
+			{ Rml::Input::KI_BACK,   juce::KeyPress::backspaceKey,  md::PanelControl::Exit        },
+			{ Rml::Input::KI_1,      '1',                           md::PanelControl::Trigger1    },
+			{ Rml::Input::KI_2,      '2',                           md::PanelControl::Trigger2    },
+			{ Rml::Input::KI_3,      '3',                           md::PanelControl::Trigger3    },
+			{ Rml::Input::KI_4,      '4',                           md::PanelControl::Trigger4    },
+			{ Rml::Input::KI_5,      '5',                           md::PanelControl::Trigger5    },
+			{ Rml::Input::KI_6,      '6',                           md::PanelControl::Trigger6    },
+			{ Rml::Input::KI_7,      '7',                           md::PanelControl::Trigger7    },
+			{ Rml::Input::KI_8,      '8',                           md::PanelControl::Trigger8    },
+			{ Rml::Input::KI_Q,      'Q',                           md::PanelControl::Trigger9    },
+			{ Rml::Input::KI_W,      'W',                           md::PanelControl::Trigger10   },
+			{ Rml::Input::KI_E,      'E',                           md::PanelControl::Trigger11   },
+			{ Rml::Input::KI_R,      'R',                           md::PanelControl::Trigger12   },
+			{ Rml::Input::KI_T,      'T',                           md::PanelControl::Trigger13   },
+			{ Rml::Input::KI_Y,      'Y',                           md::PanelControl::Trigger14   },
+			{ Rml::Input::KI_U,      'U',                           md::PanelControl::Trigger15   },
+			{ Rml::Input::KI_I,      'I',                           md::PanelControl::Trigger16   },
+			{ Rml::Input::KI_TAB,    juce::KeyPress::tabKey,        md::PanelControl::Record      },
+			{ Rml::Input::KI_P,      'P',                           md::PanelControl::Play        },
+			{ Rml::Input::KI_S,      'S',                           md::PanelControl::Stop        },
+			{ Rml::Input::KI_K,      'K',                           md::PanelControl::Kit         },
+			{ Rml::Input::KI_F,      'F',                           md::PanelControl::PatternSong, md::PanelControl::SongEnable },
 		}};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
@@ -619,12 +623,12 @@ namespace mdJucePlugin
 					return;
 
 				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
+				const auto shiftDown = juceRmlUi::helper::getKeyModShift(_event);
 				for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
 				{
 					if(key != m_keyboardMappings[mapping].key)
 						continue;
-					pressKeyboardMapping(mapping,
-						juceRmlUi::helper::getKeyModShift(_event));
+					pressKeyboardMapping(mapping, shiftDown);
 					_event.StopPropagation();
 					return;
 				}
@@ -743,8 +747,9 @@ namespace mdJucePlugin
 			return;
 
 		const auto& mapping = m_keyboardMappings[_index];
-		const auto packet = md::panelPacket(getModel(), mapping.control);
-		auto* const button = findButtonForControl(mapping.control);
+		const auto control = resolveKeyboardControl(mapping);
+		const auto packet = md::panelPacket(getModel(), control);
+		auto* const button = findButtonForControl(control);
 		// Do not steal a simultaneous mouse gesture for the same physical switch.
 		if(!packet || !button || button->isChecked())
 			return;
@@ -764,8 +769,9 @@ namespace mdJucePlugin
 
 		m_keyboardMappingPressed[_index] = false;
 		const auto& mapping = m_keyboardMappings[_index];
-		if(const auto packet = md::panelPacket(getModel(), mapping.control))
-			if(auto* const button = findButtonForControl(mapping.control))
+		const auto control = resolveKeyboardControl(mapping);
+		if(const auto packet = md::panelPacket(getModel(), control))
+			if(auto* const button = findButtonForControl(control))
 			{
 				juceRmlUi::ElemButton::setChecked(button, false);
 				const auto combined = m_panelRows.release(*packet);
@@ -786,6 +792,13 @@ namespace mdJucePlugin
 			if(pb.control == _control)
 				return findChild<juceRmlUi::ElemButton>(pb.id, false);
 		return nullptr;
+	}
+
+	md::PanelControl Editor::resolveKeyboardControl(const KeyboardMapping& _mapping) const
+	{
+		if(_mapping.altControl && !md::panelPacket(getModel(), _mapping.control))
+			return *_mapping.altControl;
+		return _mapping.control;
 	}
 
 	void Editor::pressKeyboardFunction()
@@ -2222,10 +2235,18 @@ namespace mdJucePlugin
 		// Key-up can be swallowed by a plugin host after a Shift-modified arrow
 		// chord. Poll the native key state so the corresponding panel switch is
 		// never left asserted.
+		// Non-printable keys (arrows, enter, back, tab) can have keyup swallowed by
+		// some hosts after a chord. Poll native state as a failsafe.
+		// Printable keys (letters, numbers) are released exclusively by keyup events.
 		for(size_t i = 0; i < m_keyboardMappings.size(); ++i)
-			if(m_keyboardMappingPressed[i]
-				&& !juce::KeyPress::isKeyCurrentlyDown(m_keyboardMappings[i].juceKeyCode))
+		{
+			if(!m_keyboardMappingPressed[i])
+				continue;
+			const auto juceKey = m_keyboardMappings[i].juceKeyCode;
+			const bool isPrintable = juceKey >= 32 && juceKey <= 126;
+			if(!isPrintable && !juce::KeyPress::isKeyCurrentlyDown(juceKey))
 				releaseKeyboardMapping(i);
+		}
 		// Some plugin hosts can lose the modifier key-up when focus changes. Poll
 		// native state as a fail-safe so no panel row remains held indefinitely.
 		if(!m_shiftPanelLatch.empty()
