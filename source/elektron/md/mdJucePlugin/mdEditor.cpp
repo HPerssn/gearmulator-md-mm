@@ -1055,6 +1055,7 @@ namespace mdJucePlugin
 			&& (_focusedComponent == panel || panel->isParentOf(_focusedComponent)))
 			return;
 
+		releaseKeyboardMappings();
 		cancelPanelInputGestures();
 	}
 
@@ -2248,21 +2249,6 @@ namespace mdJucePlugin
 		// remain held after physical Shift has been released.
 		if(m_keyboardFunctionPressed && !modifiers.isShiftDown())
 			releaseKeyboardFunction();
-		// Key-up can be swallowed by a plugin host after a Shift-modified arrow
-		// chord. Poll the native key state so the corresponding panel switch is
-		// never left asserted.
-		// Non-printable keys (arrows, enter, back, tab) can have keyup swallowed by
-		// some hosts after a chord. Poll native state as a failsafe.
-		// Printable keys (letters, numbers) are released exclusively by keyup events.
-		for(size_t i = 0; i < m_keyboardMappings.size(); ++i)
-		{
-			if(!m_keyboardMappingPressed[i])
-				continue;
-			const auto juceKey = m_keyboardMappings[i].juceKeyCode;
-			const bool isPrintable = juceKey >= 32 && juceKey <= 126;
-			if(!isPrintable && !juce::KeyPress::isKeyCurrentlyDown(juceKey))
-				releaseKeyboardMapping(i);
-		}
 		// Some plugin hosts can lose the modifier key-up when focus changes. Poll
 		// native state as a fail-safe so no panel row remains held indefinitely.
 		if(!m_shiftPanelLatch.empty()
