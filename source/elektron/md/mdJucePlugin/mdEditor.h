@@ -88,6 +88,7 @@ namespace mdJucePlugin
 		bool canCancelUserSysexTransfer() const;
 		std::weak_ptr<void> getLifetimeToken() const { return m_lifetimeToken; }
 
+		md::MachineModel getModel() const;
 		const std::vector<KeyboardMapping>& getKeyboardMappings() const { return m_keyboardMappings; }
 		void setKeyboardMapping(size_t _index, const KeyboardMapping& _mapping);
 		void resetKeyboardMappings();
@@ -102,7 +103,6 @@ namespace mdJucePlugin
 		std::shared_ptr<md::FrontPanelPublisher> getFrontPanelPublisher() const;
 		bool sendPanelEvent(uint8_t _command, uint8_t _argument) const;
 		bool refreshFrontPanelState(double _nowMilliseconds);
-		md::MachineModel getModel() const;
 		void createLcd();
 		void updateLcdInteractionState();
 		std::optional<unsigned> lcdTargetAt(const Rml::Event& _event) const;

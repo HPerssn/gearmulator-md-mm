@@ -3,6 +3,8 @@
 #include "mdEditor.h"
 #include "mdKeyBindings.h"
 
+#include "mdLib/mdpanel.h"
+
 #include "juceRmlUi/rmlEventListener.h"
 #include "juceRmlUi/rmlHelper.h"
 
@@ -105,9 +107,18 @@ namespace mdJucePlugin
 		const auto& mappings = m_editor.getKeyboardMappings();
 		m_rows.resize(mappings.size(), nullptr);
 
+		const auto model = m_editor.getModel();
 		for(size_t i = 0; i < mappings.size(); ++i)
 		{
 			const auto& m = mappings[i];
+
+			const bool primaryValid = md::panelPacket(model, m.control).has_value();
+			const bool altValid = m.altControl && md::panelPacket(model, *m.altControl).has_value();
+			if(!primaryValid && !altValid)
+			{
+				m_rows[i] = nullptr;
+				continue;
+			}
 
 			auto* row = m_listContainer->AppendChild(m_rowTemplate->Clone());
 			row->RemoveProperty("display");

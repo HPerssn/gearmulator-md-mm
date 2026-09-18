@@ -45,6 +45,12 @@ namespace mdJucePlugin
 			{ Rml::Input::KI_N,      'N',                           md::PanelControl::SynthesisEffectsRouting, md::PanelControl::DataPageForward },
 			{ Rml::Input::KI_M,      'M',                           md::PanelControl::DataPageBackward, md::PanelControl::SynthesisEffectsRouting },
 			{ Rml::Input::KI_B,      'B',                           md::PanelControl::Tempo       },
+			{ Rml::Input::KI_Z,      'Z',                           md::PanelControl::Track1      },
+			{ Rml::Input::KI_X,      'X',                           md::PanelControl::Track2      },
+			{ Rml::Input::KI_C,      'C',                           md::PanelControl::Track3      },
+			{ Rml::Input::KI_V,      'V',                           md::PanelControl::Track4      },
+			{ Rml::Input::KI_9,      '9',                           md::PanelControl::Track5      },
+			{ Rml::Input::KI_0,      '0',                           md::PanelControl::Track6      },
 		}};
 		return s_defaults;
 	}
@@ -77,6 +83,12 @@ namespace mdJucePlugin
 		if(_juceKey == juce::KeyPress::F10Key)        return Rml::Input::KI_F10;
 		if(_juceKey == juce::KeyPress::F11Key)        return Rml::Input::KI_F11;
 		if(_juceKey == juce::KeyPress::F12Key)        return Rml::Input::KI_F12;
+		if(_juceKey == ',') return Rml::Input::KI_OEM_COMMA;
+		if(_juceKey == '.') return Rml::Input::KI_OEM_PERIOD;
+		if(_juceKey == '-') return Rml::Input::KI_OEM_MINUS;
+		if(_juceKey == '=') return Rml::Input::KI_OEM_PLUS;
+		if(_juceKey == '/') return Rml::Input::KI_OEM_2;
+		if(_juceKey == '`') return Rml::Input::KI_OEM_3;
 
 		if(_juceKey >= 'A' && _juceKey <= 'Z')
 			return static_cast<Rml::Input::KeyIdentifier>(Rml::Input::KI_A + (_juceKey - 'A'));
@@ -116,7 +128,13 @@ namespace mdJucePlugin
 		case Rml::Input::KI_F9:        return juce::KeyPress::F9Key;
 		case Rml::Input::KI_F10:       return juce::KeyPress::F10Key;
 		case Rml::Input::KI_F11:       return juce::KeyPress::F11Key;
-		case Rml::Input::KI_F12:       return juce::KeyPress::F12Key;
+		case Rml::Input::KI_F12:        return juce::KeyPress::F12Key;
+		case Rml::Input::KI_OEM_COMMA:  return ',';
+		case Rml::Input::KI_OEM_PERIOD: return '.';
+		case Rml::Input::KI_OEM_MINUS:  return '-';
+		case Rml::Input::KI_OEM_PLUS:   return '=';
+		case Rml::Input::KI_OEM_2:      return '/';
+		case Rml::Input::KI_OEM_3:      return '`';
 		default: break;
 		}
 
@@ -164,10 +182,7 @@ namespace mdJucePlugin
 		if(juceKey == juce::KeyPress::F12Key)        return "F12";
 
 		if(juceKey >= 32 && juceKey <= 126)
-		{
-			std::string s(1, static_cast<char>(juceKey));
-			return s;
-		}
+			return std::string(1, static_cast<char>(juceKey));
 
 		return "?";
 	}
