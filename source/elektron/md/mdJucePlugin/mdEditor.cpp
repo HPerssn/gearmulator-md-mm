@@ -66,7 +66,7 @@ namespace mdJucePlugin
 			md::PanelControl control;
 		};
 
-		const std::array<KeyboardMapping, 35> g_defaultKeyboardMappings =
+		const std::array<KeyboardMapping, 38> g_defaultKeyboardMappings =
 		{{
 			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left        },
 			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right       },
@@ -102,7 +102,9 @@ namespace mdJucePlugin
 			{ Rml::Input::KI_G,      'G',                           md::PanelControl::BankGroup   },
 			{ Rml::Input::KI_L,      'L',                           md::PanelControl::Scale       },
 			{ Rml::Input::KI_J,      'J',                           md::PanelControl::ClassicExtended, md::PanelControl::TrigSelect },
-			{ Rml::Input::KI_N,      'N',                           md::PanelControl::DataPageForward },
+			{ Rml::Input::KI_N,      'N',                           md::PanelControl::SynthesisEffectsRouting, md::PanelControl::DataPageForward },
+			{ Rml::Input::KI_M,      'M',                           md::PanelControl::DataPageBackward, md::PanelControl::SynthesisEffectsRouting },
+			{ Rml::Input::KI_B,      'B',                           md::PanelControl::Tempo       },
 		}};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
