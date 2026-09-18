@@ -53,6 +53,8 @@ namespace mdJucePlugin
 		Rml::Input::KeyIdentifier key;
 		int juceKeyCode;
 		md::PanelControl control;
+		// When the primary control has no packet for the active model, this is used instead.
+		std::optional<md::PanelControl> altControl;
 	};
 
 	class Editor final : public jucePluginEditorLib::Editor, juce::MultiTimer,
@@ -124,6 +126,7 @@ namespace mdJucePlugin
 		void releaseKeyboardMapping(size_t _index);
 		void releaseKeyboardMappings();
 		juceRmlUi::ElemButton* findButtonForControl(md::PanelControl _control) const;
+		md::PanelControl resolveKeyboardControl(const KeyboardMapping& _mapping) const;
 		void pressKeyboardFunction();
 		void releaseKeyboardFunction();
 		void releaseActivePanelButtons();
