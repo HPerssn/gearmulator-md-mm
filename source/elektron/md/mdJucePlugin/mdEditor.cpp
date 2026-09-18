@@ -4,6 +4,7 @@
 #include "mdPanelAffordances.h"
 #include "mdPluginProcessor.h"
 #include "mdSettingsAudioInput.h"
+#include "mdSettingsKeyBindings.h"
 #include "mdSettingsPanelFeel.h"
 #include "mdPixelPerfectPanel.h"
 #include "mdLcdViewport.h"
@@ -65,47 +66,6 @@ namespace mdJucePlugin
 			const char* id;
 			md::PanelControl control;
 		};
-
-		const std::array<KeyboardMapping, 38> g_defaultKeyboardMappings =
-		{{
-			{ Rml::Input::KI_LEFT,   juce::KeyPress::leftKey,       md::PanelControl::Left        },
-			{ Rml::Input::KI_RIGHT,  juce::KeyPress::rightKey,      md::PanelControl::Right       },
-			{ Rml::Input::KI_UP,     juce::KeyPress::upKey,         md::PanelControl::Up          },
-			{ Rml::Input::KI_DOWN,   juce::KeyPress::downKey,       md::PanelControl::Down        },
-			{ Rml::Input::KI_RETURN, juce::KeyPress::returnKey,     md::PanelControl::Enter       },
-			{ Rml::Input::KI_BACK,   juce::KeyPress::backspaceKey,  md::PanelControl::Exit        },
-			{ Rml::Input::KI_1,      '1',                           md::PanelControl::Trigger1    },
-			{ Rml::Input::KI_2,      '2',                           md::PanelControl::Trigger2    },
-			{ Rml::Input::KI_3,      '3',                           md::PanelControl::Trigger3    },
-			{ Rml::Input::KI_4,      '4',                           md::PanelControl::Trigger4    },
-			{ Rml::Input::KI_5,      '5',                           md::PanelControl::Trigger5    },
-			{ Rml::Input::KI_6,      '6',                           md::PanelControl::Trigger6    },
-			{ Rml::Input::KI_7,      '7',                           md::PanelControl::Trigger7    },
-			{ Rml::Input::KI_8,      '8',                           md::PanelControl::Trigger8    },
-			{ Rml::Input::KI_Q,      'Q',                           md::PanelControl::Trigger9    },
-			{ Rml::Input::KI_W,      'W',                           md::PanelControl::Trigger10   },
-			{ Rml::Input::KI_E,      'E',                           md::PanelControl::Trigger11   },
-			{ Rml::Input::KI_R,      'R',                           md::PanelControl::Trigger12   },
-			{ Rml::Input::KI_T,      'T',                           md::PanelControl::Trigger13   },
-			{ Rml::Input::KI_Y,      'Y',                           md::PanelControl::Trigger14   },
-			{ Rml::Input::KI_U,      'U',                           md::PanelControl::Trigger15   },
-			{ Rml::Input::KI_I,      'I',                           md::PanelControl::Trigger16   },
-			{ Rml::Input::KI_TAB,    juce::KeyPress::tabKey,        md::PanelControl::Record      },
-			{ Rml::Input::KI_O,      'O',                           md::PanelControl::Stop        },
-			{ Rml::Input::KI_P,      'P',                           md::PanelControl::Play        },
-			{ Rml::Input::KI_K,      'K',                           md::PanelControl::Kit         },
-			{ Rml::Input::KI_F,      'F',                           md::PanelControl::PatternSong, md::PanelControl::SongEnable },
-			{ Rml::Input::KI_A,      'A',                           md::PanelControl::BankA       },
-			{ Rml::Input::KI_S,      'S',                           md::PanelControl::BankB       },
-			{ Rml::Input::KI_D,      'D',                           md::PanelControl::BankC       },
-			{ Rml::Input::KI_H,      'H',                           md::PanelControl::BankD       },
-			{ Rml::Input::KI_G,      'G',                           md::PanelControl::BankGroup   },
-			{ Rml::Input::KI_L,      'L',                           md::PanelControl::Scale       },
-			{ Rml::Input::KI_J,      'J',                           md::PanelControl::ClassicExtended, md::PanelControl::TrigSelect },
-			{ Rml::Input::KI_N,      'N',                           md::PanelControl::SynthesisEffectsRouting, md::PanelControl::DataPageForward },
-			{ Rml::Input::KI_M,      'M',                           md::PanelControl::DataPageBackward, md::PanelControl::SynthesisEffectsRouting },
-			{ Rml::Input::KI_B,      'B',                           md::PanelControl::Tempo       },
-		}};
 
 		bool lcdChanged(const md::FrontPanel& _a, const md::FrontPanel& _b)
 		{
@@ -324,6 +284,7 @@ namespace mdJucePlugin
 
 		createLcd();
 		initKeyboardShortcuts();
+		loadKeyboardMappingsFromConfig();
 		createButtons();
 		createEncoders();
 		createMasterVolume();
@@ -747,8 +708,45 @@ namespace mdJucePlugin
 
 	void Editor::initKeyboardShortcuts()
 	{
-		m_keyboardMappings.assign(g_defaultKeyboardMappings.begin(), g_defaultKeyboardMappings.end());
+		const auto& defaults = defaultKeyboardMappings();
+		m_keyboardMappings.assign(defaults.begin(), defaults.end());
 		m_keyboardMappingPressed.assign(m_keyboardMappings.size(), false);
+	}
+
+	void Editor::loadKeyboardMappingsFromConfig()
+	{
+		auto& config = getProcessor().getConfig();
+		for(size_t i = 0; i < m_keyboardMappings.size(); ++i)
+		{
+			const auto key = "keybind_" + juce::String(static_cast<int>(i));
+			if(!config.containsKey(key))
+				continue;
+			const auto juceKeyCode = config.getIntValue(key, 0);
+			m_keyboardMappings[i].juceKeyCode = juceKeyCode;
+			m_keyboardMappings[i].key = rmlKeyForJuceKey(juceKeyCode);
+		}
+	}
+
+	void Editor::setKeyboardMapping(const size_t _index, const KeyboardMapping& _mapping)
+	{
+		if(_index >= m_keyboardMappings.size())
+			return;
+		releaseKeyboardMapping(_index);
+		m_keyboardMappings[_index] = _mapping;
+
+		auto& config = getProcessor().getConfig();
+		config.setValue("keybind_" + juce::String(static_cast<int>(_index)), _mapping.juceKeyCode);
+	}
+
+	void Editor::resetKeyboardMappings()
+	{
+		releaseKeyboardMappings();
+
+		auto& config = getProcessor().getConfig();
+		for(size_t i = 0; i < g_keyboardMappingCount; ++i)
+			config.removeValue("keybind_" + juce::String(static_cast<int>(i)));
+
+		initKeyboardShortcuts();
 	}
 
 	void Editor::pressKeyboardMapping(const size_t _index, const bool _shiftDown)
@@ -1284,6 +1282,12 @@ namespace mdJucePlugin
 		return getModel() == md::MachineModel::Monomachine ? "Monomachine" : "Machinedrum";
 	}
 
+	void Editor::registerSettings(std::vector<std::unique_ptr<jucePluginEditorLib::SettingsPlugin>>& _plugins)
+	{
+		jucePluginEditorLib::Editor::registerSettings(_plugins);
+		_plugins.push_back(std::make_unique<SettingsPluginKeyBindings>(getProcessor()));
+	}
+
 	std::unique_ptr<jucePluginEditorLib::SettingsDeviceSpecific> Editor::createDeviceSpecificSettings(
 		const std::string& _templateName, Rml::Element* _root)
 	{
@@ -1291,6 +1295,8 @@ namespace mdJucePlugin
 			return std::make_unique<SettingsPanelFeel>(*this, _root);
 		if (_templateName == "tus_settings_dspaudio_Machinedrum" || _templateName == "tus_settings_dspaudio_Monomachine")
 			return std::make_unique<SettingsAudioInput>(getProcessor(), _root);
+		if (_templateName == "tus_settings_keybinds_Machinedrum" || _templateName == "tus_settings_keybinds_Monomachine")
+			return std::make_unique<SettingsKeyBindings>(*this, _root);
 		return jucePluginEditorLib::Editor::createDeviceSpecificSettings(_templateName, _root);
 	}
 

@@ -10,6 +10,7 @@
 #include "jucePluginEditorLib/pluginEditor.h"
 
 #include "mdFrontPanelPresentation.h"
+#include "mdKeyBindings.h"
 #include "mdLcdGesture.h"
 #include "mdLcdInteractionModel.h"
 #include "mdPanelAffordances.h"
@@ -48,15 +49,6 @@ namespace mdJucePlugin
 	class PixelPerfectPanel;
 	struct EditorIdentityTestAccess;
 
-	struct KeyboardMapping
-	{
-		Rml::Input::KeyIdentifier key;
-		int juceKeyCode;
-		md::PanelControl control;
-		// When the primary control has no packet for the active model, this is used instead.
-		std::optional<md::PanelControl> altControl;
-	};
-
 	class Editor final : public jucePluginEditorLib::Editor, juce::MultiTimer,
 		private juce::FocusChangeListener
 	{
@@ -76,6 +68,7 @@ namespace mdJucePlugin
 		std::unique_ptr<jucePluginEditorLib::SettingsDeviceSpecific> createDeviceSpecificSettings(
 			const std::string& _templateName, Rml::Element* _root) override;
 		std::string getSettingsTemplateSuffix() const override;
+		void registerSettings(std::vector<std::unique_ptr<jucePluginEditorLib::SettingsPlugin>>& _plugins) override;
 
 		// Reapplies the configured wheel/encoder drag-speed percentages to the
 		// panel knobs. Called on create and from the settings page.
@@ -94,6 +87,10 @@ namespace mdJucePlugin
 		bool isUserSysexTransferActive() const;
 		bool canCancelUserSysexTransfer() const;
 		std::weak_ptr<void> getLifetimeToken() const { return m_lifetimeToken; }
+
+		const std::vector<KeyboardMapping>& getKeyboardMappings() const { return m_keyboardMappings; }
+		void setKeyboardMapping(size_t _index, const KeyboardMapping& _mapping);
+		void resetKeyboardMappings();
 
 		static constexpr int g_panelSpeedPercents[] = {50, 75, 100, 150, 200, 300};
 
@@ -122,6 +119,7 @@ namespace mdJucePlugin
 		void releasePanelButton(juceRmlUi::ElemButton* _button, md::PanelControl _control,
 			const md::PanelPacket& _packet);
 		void initKeyboardShortcuts();
+		void loadKeyboardMappingsFromConfig();
 		void pressKeyboardMapping(size_t _index, bool _shiftDown);
 		void releaseKeyboardMapping(size_t _index);
 		void releaseKeyboardMappings();
