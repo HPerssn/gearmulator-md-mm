@@ -213,6 +213,9 @@ namespace mdJucePlugin
 	void SettingsKeyBindings::resetToDefaults()
 	{
 		m_editor.resetKeyboardMappings();
+		m_editor.releaseKeyboardFunction();
+		m_editor.releasePanelButtonGestures();
+		m_editor.releaseAllPanelInputs();
 		buildRows();
 		if(m_resetStatusElem)
 			m_resetStatusElem->SetInnerRML("Defaults restored.");

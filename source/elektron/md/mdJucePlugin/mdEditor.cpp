@@ -572,8 +572,17 @@ namespace mdJucePlugin
 			juceRmlUi::EventListener::Add(b, Rml::EventId::Mousedown,
 				[this, b, packet, control = pb.control](Rml::Event& _event)
 			{
-				pressPanelButton(b, control, *packet,
-					_event.GetParameter<int>("shift_key", 0) != 0);
+				const bool shiftDown = _event.GetParameter<int>("shift_key", 0) != 0;
+				if(shiftDown)
+				{
+					m_shiftKeyFromMouse = true;
+					pressPanelButton(b, control, *packet, true);
+				}
+				else
+				{
+					m_shiftKeyFromMouse = false;
+					pressPanelButton(b, control, *packet, false);
+				}
 			});
 
 			// Mouseout releases too, otherwise dragging off a button leaves it held.
@@ -624,13 +633,31 @@ namespace mdJucePlugin
 					// engaged by a Shift-modified panel shortcut, rather than by Shift on
 					// its own, so existing Shift-click panel latches keep their meaning.
 					if(!juceRmlUi::helper::getKeyModShift(_event))
-						releaseKeyboardFunction();
+					{
+						// Coordinated shift key management - prevent shift from getting stuck
+						const bool shiftCurrentlyDown = juceRmlUi::helper::getKeyModShift(_event);
+						const bool anyShiftActive = m_keyboardFunctionPressed || !m_shiftPanelLatch.empty() ||
+											 m_shiftKeyManuallyPressed || m_shiftKeyFromKeyboard || m_shiftKeyFromMouse;
+						
+						if(anyShiftActive && !shiftCurrentlyDown)
+						{
+							// Release all shift-based systems
+							if(m_keyboardFunctionPressed)
+								releaseKeyboardFunction();
+							if(!m_shiftPanelLatch.empty())
+								releasePanelButtonGestures();
+							// Reset all shift tracking
+							m_shiftKeyManuallyPressed = false;
+							m_shiftKeyFromKeyboard = false;
+							m_shiftKeyFromMouse = false;
+						}
+					}
 					if(!juceRmlUi::helper::getKeyModAlt(_event))
 						releaseEncoderPress();
 					if(_event.GetParameter<int>("shift_key", 0) == 0
 						&& !m_shiftPanelLatch.empty())
 						releasePanelButtonGestures();
-				});
+					});
 			juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
 				[this](Rml::Event& _event)
 				{
@@ -2243,11 +2270,27 @@ namespace mdJucePlugin
 		const auto modifiers = juce::ModifierKeys::getCurrentModifiersRealtime();
 		if(m_encoderPress.active() && (!modifiers.isAltDown() || !modifiers.isLeftButtonDown()))
 			releaseEncoderPress();
+		// Coordinated shift key management - prevent shift from getting stuck
+		const bool shiftCurrentlyDown = modifiers.isShiftDown();
+		const bool anyShiftActive = m_keyboardFunctionPressed || !m_shiftPanelLatch.empty() ||
+										 m_shiftKeyManuallyPressed || m_shiftKeyFromKeyboard || m_shiftKeyFromMouse;
+		
+		if(anyShiftActive && !shiftCurrentlyDown)
+		{
+			// Release all shift-based systems
+			if(m_keyboardFunctionPressed)
+				releaseKeyboardFunction();
+			if(!m_shiftPanelLatch.empty())
+				releasePanelButtonGestures();
+			// Reset all shift tracking
+			m_shiftKeyManuallyPressed = false;
+			m_shiftKeyFromKeyboard = false;
+			m_shiftKeyFromMouse = false;
+		}
 		// Some hosts do not forward a modifier key-up to RmlUi after a keyboard
 		// chord. Match the Shift-click latch fail-safe below so FUNCTION cannot
 		// remain held after physical Shift has been released.
-		if(m_keyboardFunctionPressed && !modifiers.isShiftDown())
-			releaseKeyboardFunction();
+		// Note: The above coordinated check already handles this case
 		// Key-up can be swallowed by a plugin host after a Shift-modified arrow
 		// chord. Poll the native key state so the corresponding panel switch is
 		// never left asserted.

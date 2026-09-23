@@ -98,6 +98,11 @@ namespace mdJucePlugin
 	private:
 		friend struct EditorIdentityTestAccess;
 
+		// Shift key state tracking for coordinated release
+		bool m_shiftKeyManuallyPressed = false;
+		bool m_shiftKeyFromKeyboard = false;
+		bool m_shiftKeyFromMouse = false;
+
 		void timerCallback(int _timerId) override;
 
 		std::shared_ptr<md::FrontPanelPublisher> getFrontPanelPublisher() const;
