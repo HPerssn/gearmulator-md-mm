@@ -221,6 +221,7 @@ namespace mdJucePlugin
 
 		std::vector<KeyboardMapping> m_keyboardMappings;
 		std::vector<bool> m_keyboardMappingPressed;
+		std::vector<panelAffordances::KeyPollDebounce> m_keyboardMappingReleasePoll;
 		bool m_keyboardFunctionPressed = false;
 
 		struct PanelStep
