@@ -593,13 +593,12 @@ namespace mdJucePlugin
 				return;
 
 			const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
-			const auto shiftDown = juceRmlUi::helper::getKeyModShift(_event);
-			
+
 			for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
 			{
 				if(key != m_keyboardMappings[mapping].key)
 					continue;
-				pressKeyboardMapping(mapping, shiftDown);
+				pressKeyboardMapping(mapping);
 				_event.StopPropagation();
 				return;
 			}
@@ -608,29 +607,34 @@ namespace mdJucePlugin
 			[this](Rml::Event& _event)
 			{
 				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
-				const auto shiftDown = juceRmlUi::helper::getKeyModShift(_event);
-				
+
 				for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
 				{
 					if(key != m_keyboardMappings[mapping].key)
 						continue;
+
 					releaseKeyboardMapping(mapping);
 					_event.StopPropagation();
-					return;
+					break;
 				}
+
+				if(!juceRmlUi::helper::getKeyModAlt(_event))
+					releaseEncoderPress();
+
+				if(_event.GetParameter<int>("shift_key", 0) == 0
+					&& !m_shiftPanelLatch.empty())
+					releasePanelButtonGestures();
 			});
-		juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
+		juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
 			[this](Rml::Event& _event)
 			{
-				if(!juceRmlUi::helper::getKeyModShift(_event))
-				{
-					if(!juceRmlUi::helper::getKeyModAlt(_event))
-						releaseEncoderPress();
-
-					if(_event.GetParameter<int>("shift_key", 0) == 0
-						&& !m_shiftPanelLatch.empty())
-						releasePanelButtonGestures();
-				}
+				if(juceRmlUi::helper::getKeyIdentifier(_event) != Rml::Input::KI_ESCAPE
+					|| (m_shiftPanelLatch.empty() && m_activePanelButtons.empty()
+						&& m_panelGesturePackets.empty() && !m_patternBankPacket
+						&& !m_encoderPress.active() && !m_lcdDragGesture.active()))
+					return;
+				_event.StopPropagation();
+				cancelPanelInputGestures();
 			});
 		juceRmlUi::EventListener::Add(document, Rml::EventId::Mouseup,
 			[this](Rml::Event& _event)
@@ -641,32 +645,12 @@ namespace mdJucePlugin
 					cancelLcdGesture();
 				}
 			});
-		juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
-				[this](Rml::Event& _event)
-				{
-					if(juceRmlUi::helper::getKeyIdentifier(_event) != Rml::Input::KI_ESCAPE
-						|| (m_shiftPanelLatch.empty() && m_activePanelButtons.empty()
-							&& m_panelGesturePackets.empty() && !m_patternBankPacket
-							&& !m_encoderPress.active() && !m_lcdDragGesture.active()))
-						return;
-					_event.StopPropagation();
-					cancelPanelInputGestures();
-				});
-			juceRmlUi::EventListener::Add(document, Rml::EventId::Mouseup,
-				[this](Rml::Event& _event)
-				{
-					if(juceRmlUi::helper::getMouseButton(_event) == juceRmlUi::MouseButton::Left)
-					{
-						releaseEncoderPress();
-						cancelLcdGesture();
-					}
-				});
-			juceRmlUi::EventListener::Add(document, Rml::EventId::Dragend,
-				[this](Rml::Event&)
-				{
-					releaseEncoderPress();
-					cancelLcdGesture();
-				});
+		juceRmlUi::EventListener::Add(document, Rml::EventId::Dragend,
+			[this](Rml::Event&)
+			{
+				releaseEncoderPress();
+				cancelLcdGesture();
+			});
 		}
 	}
 
@@ -759,7 +743,7 @@ namespace mdJucePlugin
 		initKeyboardShortcuts();
 	}
 
-	void Editor::pressKeyboardMapping(const size_t _index, const bool _shiftDown)
+	void Editor::pressKeyboardMapping(const size_t _index)
 	{
 		if(_index >= m_keyboardMappings.size() || m_keyboardMappingPressed[_index])
 			return;
@@ -773,8 +757,8 @@ namespace mdJucePlugin
 			return;
 
 		m_keyboardMappingPressed[_index] = true;
-		// Shift now only works with the panel latch system (ShiftPanelLatch)
-		// Automatic Shift→Function behavior disabled
+		// Shift does not modify keyboard mappings; Shift-click panel latches
+		// are handled independently.
 		juceRmlUi::ElemButton::setChecked(button, true);
 		const auto combined = m_panelRows.press(*packet);
 		(void)sendPanelEvent(combined.row, combined.mask);
@@ -801,7 +785,6 @@ namespace mdJucePlugin
 	{
 		for(size_t i = 0; i < m_keyboardMappings.size(); ++i)
 			releaseKeyboardMapping(i);
-		releaseKeyboardFunction();
 	}
 
 	juceRmlUi::ElemButton* Editor::findButtonForControl(const md::PanelControl _control) const
@@ -817,37 +800,6 @@ namespace mdJucePlugin
 		if(_mapping.altControl && !md::panelPacket(getModel(), _mapping.control))
 			return *_mapping.altControl;
 		return _mapping.control;
-	}
-
-	void Editor::pressKeyboardFunction()
-	{
-		if(m_keyboardFunctionPressed)
-			return;
-
-		const auto packet = md::panelPacket(getModel(), md::PanelControl::Function);
-		auto* const button = findChild<juceRmlUi::ElemButton>("btFunction", false);
-		if(!packet || !button || button->isChecked())
-			return;
-
-		m_keyboardFunctionPressed = true;
-		juceRmlUi::ElemButton::setChecked(button, true);
-		const auto combined = m_panelRows.press(*packet);
-		(void)sendPanelEvent(combined.row, combined.mask);
-	}
-
-	void Editor::releaseKeyboardFunction()
-	{
-		if(!m_keyboardFunctionPressed)
-			return;
-
-		m_keyboardFunctionPressed = false;
-		if(auto* const button = findChild<juceRmlUi::ElemButton>("btFunction", false))
-			juceRmlUi::ElemButton::setChecked(button, false);
-		if(const auto packet = md::panelPacket(getModel(), md::PanelControl::Function))
-		{
-			const auto combined = m_panelRows.release(*packet);
-			(void)sendPanelEvent(combined.row, combined.mask);
-		}
 	}
 
 	void Editor::releaseActivePanelButtons()
@@ -2239,13 +2191,10 @@ namespace mdJucePlugin
 			static_cast<float>(content.height)));
 	}
 
-	void Editor::releaseShiftDependentInputsIfNeeded()
+	void Editor::releaseShiftPanelLatchIfNeeded()
 	{
 		if(juce::ModifierKeys::getCurrentModifiersRealtime().isShiftDown())
 			return;
-
-		if(m_keyboardFunctionPressed)
-			releaseKeyboardFunction();
 
 		if(!m_shiftPanelLatch.empty())
 			releasePanelButtonGestures();
@@ -2267,18 +2216,7 @@ namespace mdJucePlugin
 			releaseEncoderPress();
 
 		// Host-safe Shift release: some plugin hosts may swallow modifier key-up events.
-		releaseShiftDependentInputsIfNeeded();
-
-		// Some hosts do not forward a modifier key-up to RmlUi after a keyboard
-		// chord. Match the Shift-click latch fail-safe below so FUNCTION cannot
-		// remain held after physical Shift has been released.
-		// Note: The above coordinated check already handles this case
-		// Key-up can be swallowed by a plugin host after a Shift-modified arrow
-		// chord. Poll the native key state so the corresponding panel switch is
-		// never left asserted.
-		// Non-printable keys (arrows, enter, back, tab) can have keyup swallowed by
-		// some hosts after a chord. Poll native state as a failsafe.
-		// Printable keys (letters, numbers) are released exclusively by keyup events.
+		releaseShiftPanelLatchIfNeeded();
 		for(size_t i = 0; i < m_keyboardMappings.size(); ++i)
 		{
 			if(!m_keyboardMappingPressed[i])
@@ -2288,12 +2226,6 @@ namespace mdJucePlugin
 			if(!isPrintable && !juce::KeyPress::isKeyCurrentlyDown(juceKey))
 				releaseKeyboardMapping(i);
 		}
-		// Some plugin hosts can lose the modifier key-up when focus changes. Poll
-		// native state as a fail-safe so no panel row remains held indefinitely.
-		if(!m_shiftPanelLatch.empty()
-			&& !juce::ModifierKeys::getCurrentModifiersRealtime().isShiftDown())
-			releasePanelButtonGestures();
-
 		const auto hadFrontPanelSnapshot = m_frontPanelSnapshotValid;
 		m_frontPanelSnapshotValid = refreshFrontPanelState(nowMilliseconds);
 		if(hadFrontPanelSnapshot && !m_frontPanelSnapshotValid)

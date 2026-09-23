@@ -48,7 +48,6 @@ namespace mdJucePlugin
 	class Controller;
 	class PixelPerfectPanel;
 	struct EditorIdentityTestAccess;
-	class SettingsKeyBindings;
 
 	class Editor final : public jucePluginEditorLib::Editor, juce::MultiTimer,
 		private juce::FocusChangeListener
@@ -98,10 +97,9 @@ namespace mdJucePlugin
 
 	private:
 		friend struct EditorIdentityTestAccess;
-		friend class SettingsKeyBindings;
 
 		void timerCallback(int _timerId) override;
-	void releaseShiftDependentInputsIfNeeded();
+		void releaseShiftPanelLatchIfNeeded();
 		std::shared_ptr<md::FrontPanelPublisher> getFrontPanelPublisher() const;
 		bool sendPanelEvent(uint8_t _command, uint8_t _argument) const;
 		bool refreshFrontPanelState(double _nowMilliseconds);
@@ -122,13 +120,11 @@ namespace mdJucePlugin
 			const md::PanelPacket& _packet);
 		void initKeyboardShortcuts();
 		void loadKeyboardMappingsFromConfig();
-		void pressKeyboardMapping(size_t _index, bool _shiftDown);
+		void pressKeyboardMapping(size_t _index);
 		void releaseKeyboardMapping(size_t _index);
 		void releaseKeyboardMappings();
 		juceRmlUi::ElemButton* findButtonForControl(md::PanelControl _control) const;
 		md::PanelControl resolveKeyboardControl(const KeyboardMapping& _mapping) const;
-		void pressKeyboardFunction();
-		void releaseKeyboardFunction();
 		void releaseActivePanelButtons();
 		void beginPanelGesture(Rml::Element* _element,
 			std::initializer_list<md::PanelControl> _controls);
@@ -223,7 +219,6 @@ namespace mdJucePlugin
 
 		std::vector<KeyboardMapping> m_keyboardMappings;
 		std::vector<bool> m_keyboardMappingPressed;
-		bool m_keyboardFunctionPressed = false;
 
 		struct PanelStep
 		{

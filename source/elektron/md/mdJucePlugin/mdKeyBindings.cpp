@@ -49,7 +49,7 @@ namespace mdJucePlugin
 			{ Rml::Input::KI_C,      'C',                           md::PanelControl::Track3      },
 			{ Rml::Input::KI_V,      'V',                           md::PanelControl::Track4      },
 			{ Rml::Input::KI_B,      'B',                           md::PanelControl::Track5      },
-		{ Rml::Input::KI_N,      'N',                           md::PanelControl::Track6      },
+			{ Rml::Input::KI_N,      'N',                           md::PanelControl::Track6      },
 		}};
 		return s_defaults;
 	}
