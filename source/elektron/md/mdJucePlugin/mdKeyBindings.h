@@ -19,7 +19,7 @@ namespace mdJucePlugin
 		std::optional<md::PanelControl> altControl;
 	};
 
-	static constexpr size_t g_keyboardMappingCount = 43;
+	static constexpr size_t g_keyboardMappingCount = 42;
 
 	const std::array<KeyboardMapping, g_keyboardMappingCount>& defaultKeyboardMappings();
 

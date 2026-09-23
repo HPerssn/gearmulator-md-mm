@@ -48,6 +48,7 @@ namespace mdJucePlugin
 	class Controller;
 	class PixelPerfectPanel;
 	struct EditorIdentityTestAccess;
+	class SettingsKeyBindings;
 
 	class Editor final : public jucePluginEditorLib::Editor, juce::MultiTimer,
 		private juce::FocusChangeListener
@@ -97,14 +98,10 @@ namespace mdJucePlugin
 
 	private:
 		friend struct EditorIdentityTestAccess;
-
-		// Shift key state tracking for coordinated release
-		bool m_shiftKeyManuallyPressed = false;
-		bool m_shiftKeyFromKeyboard = false;
-		bool m_shiftKeyFromMouse = false;
+		friend class SettingsKeyBindings;
 
 		void timerCallback(int _timerId) override;
-
+	void releaseShiftDependentInputsIfNeeded();
 		std::shared_ptr<md::FrontPanelPublisher> getFrontPanelPublisher() const;
 		bool sendPanelEvent(uint8_t _command, uint8_t _argument) const;
 		bool refreshFrontPanelState(double _nowMilliseconds);

@@ -569,54 +569,47 @@ namespace mdJucePlugin
 				b->SetAttribute("title",
 					"Shift-click to hold; use another control; release Shift to let go");
 
-			juceRmlUi::EventListener::Add(b, Rml::EventId::Mousedown,
-				[this, b, packet, control = pb.control](Rml::Event& _event)
-			{
-				const bool shiftDown = _event.GetParameter<int>("shift_key", 0) != 0;
-				if(shiftDown)
-				{
-					m_shiftKeyFromMouse = true;
-					pressPanelButton(b, control, *packet, true);
-				}
-				else
-				{
-					m_shiftKeyFromMouse = false;
-					pressPanelButton(b, control, *packet, false);
-				}
-			});
-
-			// Mouseout releases too, otherwise dragging off a button leaves it held.
-			const auto release = [this, b, packet, control = pb.control](Rml::Event&)
-			{
-				releasePanelButton(b, control, *packet);
-			};
-			juceRmlUi::EventListener::Add(b, Rml::EventId::Mouseup, release);
-			juceRmlUi::EventListener::Add(b, Rml::EventId::Mouseout, release);
-		}
-
-		if(auto* const document = getDocument())
+		juceRmlUi::EventListener::Add(b, Rml::EventId::Mousedown,
+			[this, b, packet, control = pb.control](Rml::Event& _event)
 		{
-			juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
-				[this](Rml::Event& _event)
-			{
-				if(settingsOpened())
-					return;
+			const bool shiftDown = _event.GetParameter<int>("shift_key", 0) != 0;
+			pressPanelButton(b, control, *packet, shiftDown);
+		});
 
+		const auto release = [this, b, packet, control = pb.control](Rml::Event&)
+		{
+			releasePanelButton(b, control, *packet);
+		};
+		juceRmlUi::EventListener::Add(b, Rml::EventId::Mouseup, release);
+		juceRmlUi::EventListener::Add(b, Rml::EventId::Mouseout, release);
+	}
+
+	if(auto* const document = getDocument())
+	{
+		juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
+			[this](Rml::Event& _event)
+		{
+			if(settingsOpened())
+				return;
+
+			const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
+			const auto shiftDown = juceRmlUi::helper::getKeyModShift(_event);
+			
+			for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
+			{
+				if(key != m_keyboardMappings[mapping].key)
+					continue;
+				pressKeyboardMapping(mapping, shiftDown);
+				_event.StopPropagation();
+				return;
+			}
+		}, true);
+		juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
+			[this](Rml::Event& _event)
+			{
 				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
 				const auto shiftDown = juceRmlUi::helper::getKeyModShift(_event);
-				for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
-				{
-					if(key != m_keyboardMappings[mapping].key)
-						continue;
-					pressKeyboardMapping(mapping, shiftDown);
-					_event.StopPropagation();
-					return;
-				}
-			}, true);
-			juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
-				[this](Rml::Event& _event)
-			{
-				const auto key = juceRmlUi::helper::getKeyIdentifier(_event);
+				
 				for(size_t mapping = 0; mapping < m_keyboardMappings.size(); ++mapping)
 				{
 					if(key != m_keyboardMappings[mapping].key)
@@ -626,39 +619,29 @@ namespace mdJucePlugin
 					return;
 				}
 			});
-			juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
-				[this](const Rml::Event& _event)
+		juceRmlUi::EventListener::Add(document, Rml::EventId::Keyup,
+			[this](Rml::Event& _event)
+			{
+				if(!juceRmlUi::helper::getKeyModShift(_event))
 				{
-					// Modifier-only changes arrive as KI_UNKNOWN. FUNCTION is intentionally
-					// engaged by a Shift-modified panel shortcut, rather than by Shift on
-					// its own, so existing Shift-click panel latches keep their meaning.
-					if(!juceRmlUi::helper::getKeyModShift(_event))
-					{
-						// Coordinated shift key management - prevent shift from getting stuck
-						const bool shiftCurrentlyDown = juceRmlUi::helper::getKeyModShift(_event);
-						const bool anyShiftActive = m_keyboardFunctionPressed || !m_shiftPanelLatch.empty() ||
-											 m_shiftKeyManuallyPressed || m_shiftKeyFromKeyboard || m_shiftKeyFromMouse;
-						
-						if(anyShiftActive && !shiftCurrentlyDown)
-						{
-							// Release all shift-based systems
-							if(m_keyboardFunctionPressed)
-								releaseKeyboardFunction();
-							if(!m_shiftPanelLatch.empty())
-								releasePanelButtonGestures();
-							// Reset all shift tracking
-							m_shiftKeyManuallyPressed = false;
-							m_shiftKeyFromKeyboard = false;
-							m_shiftKeyFromMouse = false;
-						}
-					}
 					if(!juceRmlUi::helper::getKeyModAlt(_event))
 						releaseEncoderPress();
+
 					if(_event.GetParameter<int>("shift_key", 0) == 0
 						&& !m_shiftPanelLatch.empty())
 						releasePanelButtonGestures();
-					});
-			juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
+				}
+			});
+		juceRmlUi::EventListener::Add(document, Rml::EventId::Mouseup,
+			[this](Rml::Event& _event)
+			{
+				if(juceRmlUi::helper::getMouseButton(_event) == juceRmlUi::MouseButton::Left)
+				{
+					releaseEncoderPress();
+					cancelLcdGesture();
+				}
+			});
+		juceRmlUi::EventListener::Add(document, Rml::EventId::Keydown,
 				[this](Rml::Event& _event)
 				{
 					if(juceRmlUi::helper::getKeyIdentifier(_event) != Rml::Input::KI_ESCAPE
@@ -790,8 +773,8 @@ namespace mdJucePlugin
 			return;
 
 		m_keyboardMappingPressed[_index] = true;
-		if(_shiftDown && m_shiftPanelLatch.empty())
-			pressKeyboardFunction();
+		// Shift now only works with the panel latch system (ShiftPanelLatch)
+		// Automatic Shift→Function behavior disabled
 		juceRmlUi::ElemButton::setChecked(button, true);
 		const auto combined = m_panelRows.press(*packet);
 		(void)sendPanelEvent(combined.row, combined.mask);
@@ -2256,6 +2239,18 @@ namespace mdJucePlugin
 			static_cast<float>(content.height)));
 	}
 
+	void Editor::releaseShiftDependentInputsIfNeeded()
+	{
+		if(juce::ModifierKeys::getCurrentModifiersRealtime().isShiftDown())
+			return;
+
+		if(m_keyboardFunctionPressed)
+			releaseKeyboardFunction();
+
+		if(!m_shiftPanelLatch.empty())
+			releasePanelButtonGestures();
+	}
+
 	void Editor::timerCallback(const int _timerId)
 	{
 		if(_timerId == g_panelTimerId)
@@ -2270,23 +2265,10 @@ namespace mdJucePlugin
 		const auto modifiers = juce::ModifierKeys::getCurrentModifiersRealtime();
 		if(m_encoderPress.active() && (!modifiers.isAltDown() || !modifiers.isLeftButtonDown()))
 			releaseEncoderPress();
-		// Coordinated shift key management - prevent shift from getting stuck
-		const bool shiftCurrentlyDown = modifiers.isShiftDown();
-		const bool anyShiftActive = m_keyboardFunctionPressed || !m_shiftPanelLatch.empty() ||
-										 m_shiftKeyManuallyPressed || m_shiftKeyFromKeyboard || m_shiftKeyFromMouse;
-		
-		if(anyShiftActive && !shiftCurrentlyDown)
-		{
-			// Release all shift-based systems
-			if(m_keyboardFunctionPressed)
-				releaseKeyboardFunction();
-			if(!m_shiftPanelLatch.empty())
-				releasePanelButtonGestures();
-			// Reset all shift tracking
-			m_shiftKeyManuallyPressed = false;
-			m_shiftKeyFromKeyboard = false;
-			m_shiftKeyFromMouse = false;
-		}
+
+		// Host-safe Shift release: some plugin hosts may swallow modifier key-up events.
+		releaseShiftDependentInputsIfNeeded();
+
 		// Some hosts do not forward a modifier key-up to RmlUi after a keyboard
 		// chord. Match the Shift-click latch fail-safe below so FUNCTION cannot
 		// remain held after physical Shift has been released.
